@@ -32,7 +32,8 @@ WEBRTC_ROOT="$PROJECT_ROOT/webrtc"
 create_directory_if_not_found $WEBRTC_ROOT
 BUILD="$WEBRTC_ROOT/libjingle_peerconnection_builds"
 WEBRTC_TARGET="AppRTCDemo"
-
+JAVA_PROJECT_TARGET="/home/gardev/android/lab/AndroidRTC/librtc/libs"
+NDK_PROJECT_TARGET="/home/gardev/android/lab/AndroidRTC/librtc/src/main/jniLibs"
 ANDROID_TOOLCHAINS="$WEBRTC_ROOT/src/third_party/android_tools/ndk/toolchains"
 
 exec_ninja() {
@@ -77,6 +78,16 @@ pull_depot_tools() {
     # Navigate back
 	cd $WORKING_DIR
 }
+
+# Avoid update the depot tools if possible
+enable_depot_tools(){
+    WORKING_DIR=`pwd`
+    if [ -d "$DEPOT_TOOLS" ]; then
+	PATH="$PATH:$DEPOT_TOOLS"
+    fi
+    cd $WORKING_DIR
+}
+
 
 # Update/Get the webrtc code base
 pull_webrtc() {
@@ -161,6 +172,7 @@ function wrX86_64() {
 prepare_gyp_defines() {
     # Configure environment for Android
     echo Setting up build environment for Android
+    echo $WEBRTC_ROOT
     source $WEBRTC_ROOT/src/build/android/envsetup.sh
 
     # Check to see if the user wants to set their own gyp defines
@@ -196,7 +208,6 @@ execute_build() {
 
     echo Run gclient hooks
     gclient runhooks
-
     if [ "$WEBRTC_ARCH" = "x86" ] ;
     then
         ARCH="x86"
@@ -291,21 +302,31 @@ get_webrtc() {
     pull_webrtc $1
 }
 
+copy_build() {
+    #copy the so files
+    cp -r "$WEBRTC_ROOT/libjingle_peerconnection_builds/Release/jni/armeabi-v7a" "$NDK_PROJECT_TARGET"
+    #copy the jar file
+    cp "$WEBRTC_ROOT/libjingle_peerconnection_builds/Release/libs/libjingle_peerconnection.jar" "$JAVA_PROJECT_TARGET"   
+    echo "mission completed"
+}
+
 # Updates webrtc and builds apprtc
 build_apprtc() {
-    export WEBRTC_ARCH=armv7
+    export WEBRTC_ARCH=armv7   
+    #enable the depot tools manually
+    enable_depot_tools
     prepare_gyp_defines &&
     execute_build
+    copy_build
+    #export WEBRTC_ARCH=armv8
+    #prepare_gyp_defines &&
+    #execute_build
 
-    export WEBRTC_ARCH=armv8
-    prepare_gyp_defines &&
-    execute_build
+    #export WEBRTC_ARCH=x86
+    #prepare_gyp_defines &&
+    #execute_build
 
-    export WEBRTC_ARCH=x86
-    prepare_gyp_defines &&
-    execute_build
-
-    export WEBRTC_ARCH=x86_64
-    prepare_gyp_defines &&
-    execute_build
+    #export WEBRTC_ARCH=x86_64
+    #prepare_gyp_defines &&
+    #execute_build
 }
